@@ -8,7 +8,7 @@ class Vehicle:
         self.y = y
         self.speed = speed
         self.angle = angle
-        self.trail = [(x, y)]  # For showing trails
+        self.trail = [(x, y)]  # ✅ Fix: initialize with current position
 
     def move(self):
         rad = math.radians(self.angle)
@@ -26,6 +26,7 @@ class Vehicle:
             "SPEED": self.speed,
             "ANGLE": round(self.angle)
         }
+
 
 
 class WorldSimulator:
