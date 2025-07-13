@@ -19,8 +19,8 @@ class Vehicle:
             "ID": self.id,
             "X": round(self.x, 2),
             "Y": round(self.y, 2),
-            "SPEED": self.speed,
-            "ANGLE": self.angle
+            "SPEED": round(self.speed, 2),
+            "ANGLE": round(self.angle, 2)
         }
 
 class WorldSimulator:
@@ -51,7 +51,6 @@ class WorldSimulator:
         for v in self.vehicles:
             messages.append(v.get_broadcast())
 
-        # Check for collisions
         for i in range(len(self.vehicles)):
             for j in range(i + 1, len(self.vehicles)):
                 v1 = self.vehicles[i]
@@ -70,24 +69,22 @@ class WorldSimulator:
 
         dv_dot_d = dvx * dx + dvy * dy
         if dv_dot_d >= 0:
-            return None  # Not approaching
+            return None
 
         dv2 = dvx**2 + dvy**2
         if dv2 == 0:
             return None
 
-        t = -dv_dot_d / dv2
+        t = -(dv_dot_d) / dv2
         if t < 0:
             return None
 
-        # Predicted positions at closest point
-        closest_x1 = v1.x + v1.speed * math.cos(math.radians(v1.angle)) * t
-        closest_y1 = v1.y + v1.speed * math.sin(math.radians(v1.angle)) * t
-        closest_x2 = v2.x + v2.speed * math.cos(math.radians(v2.angle)) * t
-        closest_y2 = v2.y + v2.speed * math.sin(math.radians(v2.angle)) * t
+        closest_x = v1.x + v1.speed * math.cos(math.radians(v1.angle)) * t
+        closest_y = v1.y + v1.speed * math.sin(math.radians(v1.angle)) * t
+        closest_v2_x = v2.x + v2.speed * math.cos(math.radians(v2.angle)) * t
+        closest_v2_y = v2.y + v2.speed * math.sin(math.radians(v2.angle)) * t
 
-        distance = math.hypot(closest_x1 - closest_x2, closest_y1 - closest_y2)
+        distance = math.sqrt((closest_x - closest_v2_x)**2 + (closest_y - closest_v2_y)**2)
         if distance < 10:
             return t
-
         return None
