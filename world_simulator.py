@@ -65,7 +65,8 @@ class WorldSimulator:
                 if ttc and ttc < 5:
                     warnings.append(f"⚠️ Vehicles {v1.id} and {v2.id} may collide in {round(ttc, 2)}s")
 
-        return messages, warnings
+        return messages, warnings, communication_graph
+
 
     def time_to_collision(self, v1, v2):
         dx = v2.x - v1.x
