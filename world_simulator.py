@@ -8,20 +8,25 @@ class Vehicle:
         self.y = y
         self.speed = speed
         self.angle = angle
+        self.trail = [(x, y)]  # For showing trails
 
     def move(self):
         rad = math.radians(self.angle)
         self.x += self.speed * math.cos(rad)
         self.y += self.speed * math.sin(rad)
+        self.trail.append((self.x, self.y))
+        if len(self.trail) > 15:
+            self.trail.pop(0)
 
     def get_broadcast(self):
         return {
             "ID": self.id,
             "X": round(self.x, 2),
             "Y": round(self.y, 2),
-            "SPEED": round(self.speed, 2),
-            "ANGLE": round(self.angle, 2)
+            "SPEED": self.speed,
+            "ANGLE": round(self.angle)
         }
+
 
 class WorldSimulator:
     def __init__(self, num_vehicles=4, speed_min=5, speed_max=15):
