@@ -59,6 +59,6 @@ if warnings:
 else:
     st.success("No imminent collisions detected.")
 
-# Auto refresh
-time.sleep(1)
-st.experimental_rerun()
+# Auto-refresh logic (safe)
+if st.button("🔁 Refresh Simulation"):
+    st.rerun()
