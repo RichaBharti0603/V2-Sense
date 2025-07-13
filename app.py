@@ -52,7 +52,8 @@ if min_ttc:
 fig = go.Figure()
 
 fig.add_shape(type="circle", x0=-field_radius, y0=-field_radius, x1=field_radius, y1=field_radius,
-              xref="x", yref="y", line_color="lightgreen")
+              xref="x", yref="y", line=dict(color="lightgreen"))
+
 
 vehicle_types = ['🚗', '🚌', '🏍️', '🚙', '🚕', '🚓', '🚚', '🚛', '🛵', '🚒']
 
