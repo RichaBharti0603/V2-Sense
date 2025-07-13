@@ -47,25 +47,33 @@ class WorldSimulator:
         return vehicles
 
     def simulate(self, do_move=True):
-        messages = []
-        warnings = []
+     messages = []
+     warnings = []
+     communication_links = []
 
-        if do_move:
-            for v in self.vehicles:
-                v.move()
+     if do_move:
+         for v in self.vehicles:
+             v.move()
 
-        for v in self.vehicles:
-            messages.append(v.get_broadcast())
+     for v in self.vehicles:
+         messages.append(v.get_broadcast())
 
-        for i in range(len(self.vehicles)):
-            for j in range(i + 1, len(self.vehicles)):
-                v1 = self.vehicles[i]
-                v2 = self.vehicles[j]
-                ttc = self.time_to_collision(v1, v2)
-                if ttc and ttc < 5:
-                    warnings.append(f"⚠️ Vehicles {v1.id} and {v2.id} may collide in {round(ttc, 2)}s")
+     # Check collisions (TTC)
+     for i in range(len(self.vehicles)):
+         for j in range(i + 1, len(self.vehicles)):
+             v1 = self.vehicles[i]
+             v2 = self.vehicles[j]
+             ttc = self.time_to_collision(v1, v2)
+             if ttc and ttc < 5:
+                 warnings.append(f"⚠️ Vehicles {v1.id} and {v2.id} may collide in {round(ttc, 2)}s")
 
-        return messages, warnings, communication_graph
+            # V2V communication range check
+             dist = math.sqrt((v1.x - v2.x)**2 + (v1.y - v2.y)**2)
+             if dist < 40:  # range threshold
+                 communication_links.append((v1, v2))
+
+     return messages, warnings, communication_links
+
 
 
     def time_to_collision(self, v1, v2):
