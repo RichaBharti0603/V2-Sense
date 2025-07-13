@@ -80,12 +80,14 @@ def draw_radar(messages, warnings):
     else:
         alerts_placeholder.success("No imminent collisions detected.")
 
-# 🟢 Draw first frame statically so vehicles are always visible
-initial_messages, initial_warnings = sim.simulate(do_move=False)
-draw_radar(initial_messages, initial_warnings)
+# 🚦 Always draw initial frame
+messages, warnings = sim.simulate(do_move=False)
+draw_radar(messages, warnings)
 
-# 🟠 Continuous animation loop
-while st.session_state.running:
-    messages, warnings = sim.simulate(do_move=True)
-    draw_radar(messages, warnings)
-    time.sleep(loop_speed)
+# 🟢 If simulation is running, keep updating
+if st.session_state.running:
+    while True:
+        messages, warnings = sim.simulate(do_move=True)
+        draw_radar(messages, warnings)
+        time.sleep(loop_speed)
+
