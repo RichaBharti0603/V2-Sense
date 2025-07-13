@@ -3,106 +3,79 @@ import plotly.graph_objects as go
 import time
 from world_simulator import WorldSimulator
 
-st.set_page_config(page_title="V2Sense Radar", layout="wide")
-
-# 🚀 Branding
-st.markdown("<h1 style='text-align:center; color:#00ffcc;'>🚗 V2Sense</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align:center; color:white;'>Vehicle-to-Vehicle Collision Prediction Mesh</h4>", unsafe_allow_html=True)
-st.markdown("---")
+st.set_page_config(page_title="🚗 V2Sense Enhanced Radar UI", layout="wide")
+st.title("🚗 V2Sense: Vehicle-to-Vehicle Collision Prediction Mesh (Enhanced Radar View)")
 
 # Sidebar controls
-st.sidebar.title("🔧 Simulation Controls")
-vehicle_count = st.sidebar.slider("Number of Vehicles", 2, 10, 4)
-speed_min = st.sidebar.slider("Min Speed", 5, 15, 6)
-speed_max = st.sidebar.slider("Max Speed", 15, 30, 20)
-autoplay = st.sidebar.checkbox("Auto Move Vehicles", value=True)
-loop_speed = st.sidebar.slider("Refresh Every (s)", 1, 5, 1)
+with st.sidebar:
+    st.header("⚙️ Simulation Controls")
+    vehicle_count = st.slider("Number of Vehicles", 2, 10, 4)
+    speed_min = st.slider("Min Speed", 1, 10, 5)
+    speed_max = st.slider("Max Speed", 10, 30, 15)
+    field_radius = st.slider("Field Radius", 50, 150, 100)
+    autoplay = st.checkbox("Auto Simulate", value=True)
+    loop_speed = st.slider("Simulation Speed (seconds)", 0.1, 2.0, 1.0)
 
-# Init simulator
-if "sim" not in st.session_state or st.session_state.get("reset", False):
-    st.session_state.sim = WorldSimulator(vehicle_count, speed_min, speed_max)
-    st.session_state.last_config = (vehicle_count, speed_min, speed_max)
-    st.session_state.reset = False
-else:
-    config = (vehicle_count, speed_min, speed_max)
-    if config != st.session_state.last_config:
-        st.session_state.sim = WorldSimulator(vehicle_count, speed_min, speed_max)
-        st.session_state.last_config = config
+# Initialize simulation
+if "sim" not in st.session_state:
+    st.session_state.sim = WorldSimulator(num_vehicles=vehicle_count, speed_min=speed_min, speed_max=speed_max)
 
 sim = st.session_state.sim
+messages, warnings = sim.simulate(do_move=True)
 
-# 🚦 Simulation Step
-messages, warnings = sim.simulate(do_move=autoplay)
-
-# UI Layout
+# Setup enhanced radar-style plot
 fig = go.Figure()
 
-# Draw grid (road look)
-for i in range(-80, 100, 40):
-    fig.add_shape(type="line", x0=i, y0=-100, x1=i, y1=100,
-                  line=dict(color="gray", width=1, dash="dot"))
-    fig.add_shape(type="line", x0=-100, y0=i, x1=100, y1=i,
-                  line=dict(color="gray", width=1, dash="dot"))
+# Radar rings
+for r in range(20, field_radius + 1, 20):
+    fig.add_shape(type="circle", x0=-r, y0=-r, x1=r, y1=r,
+                  line=dict(color="rgba(0,255,0,0.2)", dash="dot"))
 
-# Map frame
-fig.add_shape(
-    type="rect", x0=-100, y0=-100, x1=100, y1=100,
-    line=dict(color="lightgray", width=2)
-)
+# Cross axes
+fig.add_shape(type="line", x0=-field_radius, y0=0, x1=field_radius, y1=0, line=dict(color="green", width=1))
+fig.add_shape(type="line", x0=0, y0=-field_radius, x1=0, y1=field_radius, line=dict(color="green", width=1))
 
-# Plot vehicles with TTC
+# Add vehicle markers
 for v in sim.vehicles:
-    ttc_label = ""
-    for w in warnings:
-        if v.id in w:
-            ttc_label = w.replace("⚠️", "").strip()
-
-    color = "red" if ttc_label else "deepskyblue"
+    color = 'red' if any(v.id in w for w in warnings) else 'cyan'
+    icon = "🚗" if color == 'cyan' else "⚠️"
     fig.add_trace(go.Scatter(
         x=[v.x], y=[v.y],
-        mode="markers+text",
-        marker=dict(size=18, color=color),
-        text=[f"🚗 {v.id}<br>{ttc_label}" if ttc_label else f"🚗 {v.id}"],
-        textposition="top center"
+        mode='markers+text',
+        marker=dict(size=12, color=color),
+        text=[f"{icon} {v.id}"],
+        textposition="top center",
+        name=f"Vehicle {v.id}"
     ))
 
+# Radar layout
 fig.update_layout(
-    height=640,
-    xaxis=dict(range=[-120, 120], visible=False),
-    yaxis=dict(range=[-120, 120], visible=False),
-    plot_bgcolor="black",
-    paper_bgcolor="black",
-    font=dict(color="white"),
-    margin=dict(l=0, r=0, t=40, b=0),
-    showlegend=False,
-    title="🛣️ Live Radar with Real-Time Vehicle Movement"
+    xaxis=dict(range=[-field_radius, field_radius], zeroline=False, showgrid=False, visible=False),
+    yaxis=dict(range=[-field_radius, field_radius], zeroline=False, showgrid=False, visible=False),
+    height=700,
+    plot_bgcolor='black',
+    paper_bgcolor='black',
+    font=dict(color='white'),
+    title="📡 GTA-style Live Radar Simulation",
+    showlegend=False
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
-# 🧠 Broadcast Data
+# Broadcast logs
 with st.expander("📋 Vehicle Broadcasts"):
     for msg in messages:
         st.json(msg)
 
-# 🛑 Alerts
-st.subheader("⚠️ Collision Warnings")
+# Warnings
+st.subheader("⚠️ Collision Alerts")
 if warnings:
     for w in warnings:
         st.error(w)
 else:
     st.success("No imminent collisions detected.")
 
-# Refresh manually if not autoplaying
-if not autoplay:
-    if st.button("🔁 Manual Step"):
-        st.rerun()
-
-# Auto-refresh (only if autoplay is checked)
-# Auto-refresh (only if autoplay is checked)
+# Auto-refresh
 if autoplay:
-    placeholder = st.empty()
-    with placeholder:
-        time.sleep(loop_speed)
-        st.rerun()
-
+    time.sleep(loop_speed)
+    st.rerun()
