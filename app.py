@@ -1,107 +1,103 @@
 import streamlit as st
 import plotly.graph_objects as go
 import time
-from collections import deque
 from world_simulator import WorldSimulator
 
-# Set Streamlit page config
-st.set_page_config(page_title="V2Sense Enhanced", layout="wide")
-st.title("🚗 V2Sense: Vehicle-to-Vehicle Collision Prediction Mesh (Enhanced UI)")
+# ---- Streamlit Setup ----
+st.set_page_config(page_title="🚗 V2Sense: Live Radar", layout="wide")
+st.title("🚗 V2Sense: Vehicle-to-Vehicle Collision Prediction Mesh (Live Radar UI)")
 
-# --- SIDEBAR CONTROLS ---
-st.sidebar.header("Simulation Settings")
+# ---- Simulation Parameters ----
 vehicle_count = st.sidebar.slider("Number of Vehicles", 2, 10, 4)
-speed_min = st.sidebar.slider("Min Speed", 1, 10, 3)
-speed_max = st.sidebar.slider("Max Speed", 5, 30, 15)
-field_radius = st.sidebar.slider("Radar Field Radius", 50, 200, 100)
+speed_min = st.sidebar.slider("Min Speed", 5, 15, 8)
+speed_max = st.sidebar.slider("Max Speed", 15, 30, 20)
+field_radius = 100
+frame_delay = 0.5  # seconds
 
-# --- SESSION INIT ---
+# ---- Initialize Simulation State ----
 if "sim" not in st.session_state:
-    st.session_state.sim = WorldSimulator(num_vehicles=vehicle_count, speed_min=speed_min, speed_max=speed_max)
-    st.session_state.history = deque(maxlen=10)  # last 10 alerts
-    st.session_state.ttc_timeline = []
+    st.session_state.sim = WorldSimulator(
+        num_vehicles=vehicle_count,
+        speed_min=speed_min,
+        speed_max=speed_max
+    )
 
 sim = st.session_state.sim
 
-# If config changed, reinitialize simulator
-if sim.num_vehicles != vehicle_count or sim.speed_min != speed_min or sim.speed_max != speed_max:
-    st.session_state.sim = WorldSimulator(num_vehicles=vehicle_count, speed_min=speed_min, speed_max=speed_max)
-    sim = st.session_state.sim
+# ---- Start Button ----
+if st.button("▶️ Start Simulation"):
+    for frame in range(500):  # simulate for 500 frames max
+        st.empty()  # Clear streamlit internal cache to refresh chart
 
-# Run simulation step
-messages, warnings = sim.simulate()
+        messages, warnings = sim.simulate()
 
-# Store alert history
-for w in warnings:
-    st.session_state.history.append(w)
+        # ---- Plotly Radar Setup ----
+        fig = go.Figure()
 
-# TTC tracking
-min_ttc = min(
-    (
-        sim.time_to_collision(v1, v2)
-        for i, v1 in enumerate(sim.vehicles)
-        for j, v2 in enumerate(sim.vehicles)
-        if i != j and sim.time_to_collision(v1, v2)
-    ),
-    default=None
-)
-if min_ttc:
-    st.session_state.ttc_timeline.append(min_ttc)
+        # Radar ring
+        fig.add_shape(
+            type="circle",
+            x0=-field_radius, y0=-field_radius,
+            x1=field_radius, y1=field_radius,
+            xref="x", yref="y",
+            line=dict(color="lightgreen", width=1)
+        )
 
-# --- PLOTLY RADAR UI ---
-fig = go.Figure()
+        # Plot all vehicles
+        for v in sim.vehicles:
+            color = 'red' if any(v.id in w for w in warnings) else 'cyan'
+            fig.add_trace(go.Scatter(
+                x=[v.x], y=[v.y],
+                mode='markers+text',
+                marker=dict(size=12, color=color),
+                text=[v.id],
+                textposition="top center"
+            ))
 
-fig.add_shape(type="circle", x0=-field_radius, y0=-field_radius, x1=field_radius, y1=field_radius,
-              xref="x", yref="y", line=dict(color="lightgreen"))
+        # Draw lines between predicted collisions
+        for warning in warnings:
+            if "between" in warning:
+                parts = warning.split("between ")[1].split(" and ")
+                id1, id2 = parts[0], parts[1]
+                v1 = next((v for v in sim.vehicles if v.id == id1), None)
+                v2 = next((v for v in sim.vehicles if v.id == id2), None)
+                if v1 and v2:
+                    fig.add_trace(go.Scatter(
+                        x=[v1.x, v2.x],
+                        y=[v1.y, v2.y],
+                        mode='lines',
+                        line=dict(color='red', dash='dash')
+                    ))
 
+        # Chart layout
+        fig.update_layout(
+            xaxis=dict(range=[-field_radius-20, field_radius+20], showgrid=False, visible=False),
+            yaxis=dict(range=[-field_radius-20, field_radius+20], showgrid=False, visible=False),
+            height=600,
+            plot_bgcolor='black',
+            paper_bgcolor='black',
+            font=dict(color='white'),
+            title="📡 Live Vehicle Radar",
+            showlegend=False
+        )
 
-vehicle_types = ['🚗', '🚌', '🏍️', '🚙', '🚕', '🚓', '🚚', '🚛', '🛵', '🚒']
+        st.plotly_chart(fig, use_container_width=True)
 
-for i, v in enumerate(sim.vehicles):
-    color = 'red' if any(v.id in w for w in warnings) else 'cyan'
-    fig.add_trace(go.Scatter(
-        x=[v.x], y=[v.y],
-        mode='markers+text',
-        marker=dict(size=16, color=color),
-        text=[f"{vehicle_types[i % len(vehicle_types)]} {v.id}"],
-        textposition="top center"
-    ))
+        # Vehicle broadcasts
+        with st.expander("📋 Vehicle Broadcasts"):
+            for msg in messages:
+                st.json(msg)
 
-fig.update_layout(
-    xaxis=dict(range=[-field_radius-20, field_radius+20], visible=False),
-    yaxis=dict(range=[-field_radius-20, field_radius+20], visible=False),
-    height=600,
-    plot_bgcolor='black',
-    paper_bgcolor='black',
-    font=dict(color='white'),
-    showlegend=False,
-    title="📡 Live Radar View"
-)
+        # Collision alerts
+        st.subheader("⚠️ Collision Alerts")
+        if warnings:
+            for w in warnings:
+                st.error(w)
+        else:
+            st.success("No imminent collisions detected.")
 
-st.plotly_chart(fig, use_container_width=True)
+        # Pause for a frame
+        time.sleep(frame_delay)
 
-# --- BROADCAST DATA ---
-with st.expander("📋 Vehicle Broadcasts"):
-    for msg in messages:
-        st.json(msg)
-
-# --- ALERT HISTORY ---
-st.subheader("🕒 Collision Alert History")
-if st.session_state.history:
-    for h in reversed(st.session_state.history):
-        st.warning(h)
-else:
-    st.info("No recent collision alerts.")
-
-# --- TTC GRAPH ---
-if st.session_state.ttc_timeline:
-    st.subheader("📈 TTC (Time to Collision) Trend")
-    st.line_chart(st.session_state.ttc_timeline)
-
-# --- AUDIO ALERT (Browser beep for visual alert presence) ---
-if warnings:
-    st.markdown("<script>new Audio('https://www.soundjay.com/button/beep-07.wav').play()</script>", unsafe_allow_html=True)
-
-# --- MANUAL REFRESH ---
-if st.button("🔁 Refresh Simulation"):
-    st.rerun()
+        # Refresh the page (automatically reruns loop)
+        st.rerun()
