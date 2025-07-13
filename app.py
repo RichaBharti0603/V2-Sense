@@ -99,6 +99,10 @@ if not autoplay:
         st.rerun()
 
 # Auto-refresh (only if autoplay is checked)
+# Auto-refresh (only if autoplay is checked)
 if autoplay:
-    time.sleep(loop_speed)
-    st.experimental_rerun()
+    placeholder = st.empty()
+    with placeholder:
+        time.sleep(loop_speed)
+        st.rerun()
+
