@@ -3,99 +3,82 @@ import plotly.graph_objects as go
 import time
 from world_simulator import WorldSimulator
 
-# ---- UI Setup ----
-st.set_page_config(page_title="🚗 V2Sense: Live Radar", layout="wide")
-st.title("🚗 V2Sense: Vehicle-to-Vehicle Collision Prediction Mesh (Live Radar UI)")
+# Page config
+st.set_page_config(page_title="🚗 V2Sense Radar", layout="wide")
+st.title("🚗 V2Sense: Vehicle-to-Vehicle Collision Prediction Mesh")
 
-# ---- Sidebar Controls ----
+# Sidebar controls
+st.sidebar.title("🔧 Simulation Settings")
 vehicle_count = st.sidebar.slider("Number of Vehicles", 2, 10, 4)
 speed_min = st.sidebar.slider("Min Speed", 5, 15, 8)
 speed_max = st.sidebar.slider("Max Speed", 15, 30, 20)
-field_radius = 100
-frame_delay = 0.5
 
-# ---- Simulation State ----
-if "sim" not in st.session_state:
-    st.session_state.sim = WorldSimulator(
-        num_vehicles=vehicle_count,
-        speed_min=speed_min,
-        speed_max=speed_max
-    )
+# Detect configuration changes and update sim if needed
+if "last_config" not in st.session_state or st.session_state.get("force_reset", False):
+    st.session_state.last_config = (vehicle_count, speed_min, speed_max)
+    st.session_state.sim = WorldSimulator(vehicle_count, speed_min, speed_max)
+    st.session_state.force_reset = False
+else:
+    current_config = (vehicle_count, speed_min, speed_max)
+    if current_config != st.session_state.last_config:
+        st.session_state.sim = WorldSimulator(vehicle_count, speed_min, speed_max)
+        st.session_state.last_config = current_config
 
 sim = st.session_state.sim
+messages, warnings = sim.simulate()
 
-# ---- Vehicle Data Simulation ----
-def draw_frame(messages, warnings, show_title="📡 Initial Radar View"):
-    fig = go.Figure()
+# Plotly UI
+field_radius = 100
+fig = go.Figure()
 
-    # Radar background circle
-    fig.add_shape(
-        type="circle",
-        x0=-field_radius, y0=-field_radius,
-        x1=field_radius, y1=field_radius,
-        xref="x", yref="y",
-        line=dict(color="lightgreen", width=1)
-    )
+# Draw boundary box (like road frame)
+fig.add_shape(
+    type="rect",
+    x0=-field_radius, y0=-field_radius,
+    x1=field_radius, y1=field_radius,
+    line=dict(color="lightgray", width=2)
+)
 
-    # Vehicles
-    for v in sim.vehicles:
-        color = 'red' if any(v.id in w for w in warnings) else 'cyan'
-        fig.add_trace(go.Scatter(
-            x=[v.x], y=[v.y],
-            mode='markers+text',
-            marker=dict(size=12, color=color),
-            text=[v.id],
-            textposition="top center"
-        ))
+# Add vehicle points
+for v in sim.vehicles:
+    color = 'red' if any(v.id in w for w in warnings) else 'cyan'
+    fig.add_trace(go.Scatter(
+        x=[v.x], y=[v.y],
+        mode='markers+text',
+        marker=dict(size=16, color=color),
+        text=[f"🚗 {v.id}"],
+        textposition="top center",
+        name=f"Vehicle {v.id}"
+    ))
 
-    # Connect predicted collision vehicles
-    for warning in warnings:
-        if "between" in warning:
-            id1, id2 = warning.split("between ")[1].split(" and ")
-            v1 = next((v for v in sim.vehicles if v.id == id1), None)
-            v2 = next((v for v in sim.vehicles if v.id == id2), None)
-            if v1 and v2:
-                fig.add_trace(go.Scatter(
-                    x=[v1.x, v2.x],
-                    y=[v1.y, v2.y],
-                    mode='lines',
-                    line=dict(color='red', dash='dash')
-                ))
+fig.update_layout(
+    xaxis=dict(range=[-120, 120], visible=False),
+    yaxis=dict(range=[-120, 120], visible=False),
+    height=600,
+    plot_bgcolor='black',
+    paper_bgcolor='black',
+    font=dict(color='white'),
+    title="📡 Real-Time V2V Radar Tracking",
+    showlegend=False
+)
 
-    fig.update_layout(
-        xaxis=dict(range=[-field_radius-20, field_radius+20], showgrid=False, visible=False),
-        yaxis=dict(range=[-field_radius-20, field_radius+20], showgrid=False, visible=False),
-        height=600,
-        plot_bgcolor='black',
-        paper_bgcolor='black',
-        font=dict(color='white'),
-        title=show_title,
-        showlegend=False
-    )
+st.plotly_chart(fig, use_container_width=True)
 
-    st.plotly_chart(fig, use_container_width=True)
+# Broadcasts
+with st.expander("📋 Vehicle Broadcasts"):
+    for msg in messages:
+        st.json(msg)
 
-    # Broadcasts
-    with st.expander("📋 Vehicle Broadcasts"):
-        for msg in messages:
-            st.json(msg)
+# Collision Alerts
+st.subheader("⚠️ Collision Alerts")
+if warnings:
+    for w in warnings:
+        st.error(w)
+else:
+    st.success("No imminent collisions detected.")
 
-    # Alerts
-    st.subheader("⚠️ Collision Alerts")
-    if warnings:
-        for w in warnings:
-            st.error(w)
-    else:
-        st.success("No imminent collisions detected.")
-
-# ---- Draw Initial Static Frame ----
-initial_messages, initial_warnings = sim.simulate(do_move=False)
-draw_frame(initial_messages, initial_warnings)
-
-# ---- Simulation Button ----
-if st.button("▶️ Start Simulation"):
-    for frame in range(100):
-        messages, warnings = sim.simulate(do_move=True)
-        draw_frame(messages, warnings, show_title=f"📡 Live Simulation (Frame {frame + 1})")
-        time.sleep(frame_delay)
+# Simulation controls
+col1, col2 = st.columns([1, 5])
+with col1:
+    if st.button("🔁 Refresh Simulation"):
         st.rerun()
