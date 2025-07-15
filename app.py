@@ -6,13 +6,39 @@ from world_simulator import WorldSimulator
 
 st.set_page_config(page_title="V2Sense", layout="wide")
 
+# 🔖 Custom CSS
+st.markdown("""
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px 0;
+        }
+        .footer {
+            margin-top: 50px;
+            padding: 20px;
+            text-align: center;
+            color: #ccc;
+            font-size: 14px;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # ======================== HERO SECTION ========================
 st.markdown("""
-    <div style='text-align:center; padding: 30px 0;'>
+    <div class='glass' style='text-align:center;'>
         <h1 style='font-size: 3em; color: #00FFCC;'>🚗 V2Sense</h1>
         <h3 style='color: white;'>Vehicle-to-Vehicle Collision Prediction Mesh</h3>
-        <p style='font-size: 18px; max-width:700px; margin:auto; color:#ccc;'>An AI-powered system for real-time vehicle communication, predictive collision alerts, and dynamic radar-based simulation for road safety.</p>
-        <a href="#dashboard"><button style='margin-top:20px; font-size: 18px; padding: 10px 30px; background-color: #00cc99; color: white; border: none; border-radius: 5px;'>Explore Dashboard</button></a>
+        <p style='font-size: 18px; max-width:700px; margin:auto; color:#ccc;'>
+            An AI-powered radar system enabling real-time communication between vehicles, helping prevent collisions before they happen.
+        </p>
+        <a href="#dashboard"><button style='margin-top:20px; font-size: 18px; padding: 10px 30px; background-color: #00cc99; color: white; border: none; border-radius: 5px;'>🚦 Explore Dashboard</button></a>
     </div>
 """, unsafe_allow_html=True)
 
@@ -20,37 +46,37 @@ st.markdown("""
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.markdown("### 🌐 Real-Time Mesh Communication")
-    st.markdown("Vehicles broadcast their location, speed, and angle to nearby peers in real time.")
+    st.markdown("<div class='glass'>", unsafe_allow_html=True)
+    st.subheader("🌐 Mesh Network")
+    st.write("Vehicles broadcast real-time data to nearby peers.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with col2:
-    st.markdown("### 🚨 Predictive Collision Alerts")
-    st.markdown("AI computes time-to-collision to detect and alert drivers before an accident occurs.")
+    st.markdown("<div class='glass'>", unsafe_allow_html=True)
+    st.subheader("🚨 AI Collision Detection")
+    st.write("AI analyzes positions and predicts Time-To-Collision (TTC).")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with col3:
-    st.markdown("### ⚙️ Customizable Simulation")
-    st.markdown("Experiment with vehicle count, speed range, and radar radius interactively.")
+    st.markdown("<div class='glass'>", unsafe_allow_html=True)
+    st.subheader("🧪 Live Simulation")
+    st.write("Control number of vehicles, speed, and field range in real-time.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# ======================== HOW IT WORKS ========================
-st.markdown("---")
-st.markdown("## 🛠️ How It Works")
-st.markdown("""
-1. 🚙 Vehicles collect data like **speed**, **angle**, and **position**.
-2. 📡 Data is **broadcast** wirelessly to nearby vehicles.
-3. 🧠 A central system predicts potential **collisions** using AI.
-4. 🚨 Alerts are visualized in a **radar-style dashboard**.
-""")
+# ======================== EMAIL FORM ========================
+with st.form("interest_form"):
+    st.markdown("<div class='glass'>", unsafe_allow_html=True)
+    st.subheader("📨 Stay in the loop")
+    email = st.text_input("Enter your email to receive updates or early access.")
+    submitted = st.form_submit_button("Submit")
+    if submitted:
+        st.success("Thanks! We’ll notify you with future updates.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# ======================== MEET THE DEVICE ========================
-st.markdown("---")
-st.markdown("## 🔍 Meet the Device")
-st.image("https://images.unsplash.com/photo-1604754742629-4f1c4df521cd?auto=format&fit=crop&w=500&q=80", caption="A palm-sized AI-driven sensor module for all types of vehicles", width=500)
-
-# ======================== DASHBOARD SIMULATION ========================
-st.markdown("---")
+# ======================== DASHBOARD ========================
 st.markdown("<h2 id='dashboard'>📊 Live Simulation Dashboard</h2>", unsafe_allow_html=True)
 
-# ==== Sidebar Controls ====
+# Sidebar Controls
 with st.sidebar:
     st.header("⚙️ Simulation Controls")
     vehicle_count = st.slider("Number of Vehicles", 2, 10, 4)
@@ -61,10 +87,9 @@ with st.sidebar:
     start_button = st.button("▶️ Start Simulation")
     stop_button = st.button("⏹️ Stop Simulation")
 
-# ==== Session ====
+# Session init
 if "sim" not in st.session_state or st.session_state.sim.num_vehicles != vehicle_count:
     st.session_state.sim = WorldSimulator(vehicle_count, speed_min, speed_max)
-
 if "running" not in st.session_state:
     st.session_state.running = False
 
@@ -81,7 +106,7 @@ broadcasts_expander = st.expander("📋 Vehicle Broadcasts")
 def draw_radar(messages, warnings):
     fig = go.Figure()
 
-    # Grid + Radar rings
+    # Grid + Rings
     for r in range(-field_radius, field_radius + 1, 20):
         fig.add_shape(type="line", x0=r, y0=-field_radius, x1=r, y1=field_radius,
                       line=dict(color="rgba(50,50,50,0.3)", width=1))
@@ -125,7 +150,6 @@ def draw_radar(messages, warnings):
         for msg in messages:
             st.json(msg)
 
-    # 🚨 Alerts
     alerts_placeholder.subheader("⚠️ Collision Alerts")
     if warnings:
         st.markdown("""
@@ -133,7 +157,6 @@ def draw_radar(messages, warnings):
               <source src="https://www.soundjay.com/button/sounds/beep-07.mp3" type="audio/mpeg">
             </audio>
         """, unsafe_allow_html=True)
-
         st.markdown(f"""
             <div style="background-color:#ff4444;padding:10px;text-align:center;border-radius:5px;animation:flash 1s infinite;">
                 🚨 <strong>Collision Warning!</strong> {len(warnings)} potential threats detected.
@@ -146,19 +169,28 @@ def draw_radar(messages, warnings):
             }}
             </style>
         """, unsafe_allow_html=True)
-
         for w in warnings:
             alerts_placeholder.error(w)
     else:
         alerts_placeholder.success("✅ No imminent collisions detected.")
 
-# 🌟 Show default state
+# Default dashboard state
 messages, warnings, _ = sim.simulate(do_move=False)
 draw_radar(messages, warnings)
 
-# 🔁 Loop
+# Looping simulation
 if st.session_state.running:
     while True:
         messages, warnings, _ = sim.simulate(do_move=True)
         draw_radar(messages, warnings)
         time.sleep(loop_speed)
+
+# ======================== FOOTER ========================
+st.markdown("""
+    <div class='footer'>
+        <p>Made with ❤️ for the James Dyson Award 2025</p>
+        <a href="https://github.com/yourusername/v2sense" target="_blank">🔗 GitHub</a> | 
+        <a href="#dashboard">📊 Dashboard</a> | 
+        <a href="mailto:team@v2sense.ai">✉️ Contact Us</a>
+    </div>
+""", unsafe_allow_html=True)
