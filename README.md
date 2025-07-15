@@ -1,5 +1,9 @@
 # V2Sense: Vehicle-to-Vehicle Safety Mesh
 
+⚠️ Note: The simulation may take a few seconds to initialize on first load due to Streamlit free-tier sleeping. Please allow 10–15 seconds.
+
+
+
 ### 🧠 What is this?
 **V2Sense** is a simulation of a collision detection system using Vehicle-to-Vehicle (V2V) communication.  
 It predicts potential collisions in real-time by simulating the position, speed, and direction of moving vehicles.
