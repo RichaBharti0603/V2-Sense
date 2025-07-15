@@ -25,6 +25,7 @@ if "running" not in st.session_state:
     st.session_state.running = False
 
 # ⛔ LANDING PAGE
+# ⛔ LANDING PAGE
 if not st.session_state.show_dashboard:
     st.markdown("<style>footer {visibility: hidden;}</style>", unsafe_allow_html=True)
     st.markdown("""
@@ -32,16 +33,39 @@ if not st.session_state.show_dashboard:
         <p style='text-align: center; font-size: 20px; color: gray;'>AI-based vehicle-to-vehicle safety mesh that predicts and prevents road accidents in real time.</p>
     """, unsafe_allow_html=True)
 
-    # Visual Image
+    # 🔍 Visual Preview Image
     try:
-        st.image(assets/landing_visual.png, use_container_width=True)
+        st.image("assets/landing_visual.png", use_container_width=True)
     except:
         st.warning("Landing image not found. Please place your image at `/assets/landing_visual.png`.")
 
+    # 👉 One-time Simulation Preview (Static)
+    st.subheader("🧭 Live Radar Preview")
+    preview_map = st.empty()
+    preview_sim = WorldSimulator(num_vehicles=4)
+    msgs, warns, links = preview_sim.simulate(do_move=False)
+
+    def draw_preview():
+        fig = go.Figure()
+        for v in preview_sim.vehicles:
+            fig.add_trace(go.Scatter(x=[v.x], y=[v.y], mode="markers+text",
+                                     marker=dict(size=12, color='cyan'),
+                                     text=[f"🚗 {v.id}"],
+                                     textposition="top center"))
+        fig.update_layout(
+            xaxis=dict(visible=False), yaxis=dict(visible=False),
+            height=400, plot_bgcolor="black", paper_bgcolor="black",
+            showlegend=False
+        )
+        preview_map.plotly_chart(fig, use_container_width=True)
+
+    draw_preview()
+
+    # Feature Highlights
     st.markdown("""
         ### 🌐 What is V2Sense?
-        V2Sense is an AI-powered communication and prediction mesh that simulates and alerts vehicles about potential collisions in real time. Using live telemetry from multiple vehicles, it dynamically calculates Time-To-Collision (TTC), highlights high-risk scenarios, and provides early warnings.
-        
+        V2Sense is an AI-powered communication and prediction mesh that simulates and alerts vehicles about potential collisions in real time.
+
         ### 🚀 Features
         - Real-time vehicle radar simulation
         - Vehicle-to-vehicle communication mesh
@@ -49,27 +73,21 @@ if not st.session_state.show_dashboard:
         - Alerts with sound + flash
         - Supports cars, bikes, and auto-rickshaws
         - Dashboard-like UI
-
         ---
-        ### 🛠️ Explore the Live System
     """)
 
-    explore = st.button("🚀 Explore Dashboard")
-
-    if explore:
-     st.session_state.show_dashboard = True
-     st.stop()
-
+    if st.button("🚀 Explore Dashboard"):
+        st.session_state.show_dashboard = True
+        st.experimental_rerun()
 
     st.markdown("""
         ---
-        👩‍💻 [GitHub Source Code](https://github.com/RichaBharti0603/V2-Sense)
-        
+        👩‍💻 [GitHub Source Code](https://github.com/RichaBharti0603/V2-Sense)  
         📤 Developed for: **James Dyson Award**  
         📧 Contact: richa@example.com  
     """)
-
     st.stop()
+
 
 # --- SIDEBAR CONTROLS
 with st.sidebar:
