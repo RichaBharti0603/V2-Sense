@@ -1,89 +1,78 @@
-import math
 import random
+import math
 
 class Vehicle:
-    def __init__(self, vid, x, y, speed, angle):
-        self.id = vid
+    def __init__(self, id, x, y, angle, speed):
+        self.id = id
         self.x = x
         self.y = y
+        self.angle = angle  # in degrees
         self.speed = speed
-        self.angle = angle
         self.trail = [(x, y)]
 
     def move(self):
         rad = math.radians(self.angle)
-        self.x += self.speed * math.cos(rad)
-        self.y += self.speed * math.sin(rad)
+        dx = self.speed * math.cos(rad)
+        dy = self.speed * math.sin(rad)
+        self.x += dx
+        self.y += dy
         self.trail.append((self.x, self.y))
+        if len(self.trail) > 20:
+            self.trail.pop(0)
 
-    def get_broadcast(self):
-        return {
-            "Vehicle ID": self.id,
-            "Position": {"x": round(self.x, 2), "y": round(self.y, 2)},
-            "Speed": round(self.speed, 2),
-            "Angle": round(self.angle, 2)
-        }
+    def distance_to(self, other):
+        return math.sqrt((self.x - other.x)**2 + (self.y - other.y)**2)
 
 class WorldSimulator:
     def __init__(self, num_vehicles=4, speed_min=5, speed_max=15):
         self.num_vehicles = num_vehicles
         self.speed_min = speed_min
         self.speed_max = speed_max
-        self.vehicles = self.generate_vehicles()
+        self.vehicles = self._spawn_vehicles()
 
-    def generate_vehicles(self):
+    def _spawn_vehicles(self):
         vehicles = []
         for i in range(self.num_vehicles):
             x = random.uniform(-80, 80)
             y = random.uniform(-80, 80)
-            speed = random.uniform(self.speed_min, self.speed_max)
             angle = random.uniform(0, 360)
-            vehicles.append(Vehicle(f"{chr(65 + i)}", x, y, speed, angle))
+            speed = random.uniform(self.speed_min, self.speed_max)
+            vehicles.append(Vehicle(id=i, x=x, y=y, angle=angle, speed=speed))
         return vehicles
 
     def simulate(self, do_move=True):
         messages = []
         warnings = []
+        comm_links = []
 
         if do_move:
             for v in self.vehicles:
                 v.move()
 
+        # Broadcasting vehicle positions
         for v in self.vehicles:
-            messages.append(v.get_broadcast())
+            messages.append({
+                "vehicle_id": v.id,
+                "x": round(v.x, 2),
+                "y": round(v.y, 2),
+                "angle": round(v.angle, 2),
+                "speed": round(v.speed, 2)
+            })
 
+        # Collision prediction & communication
         for i in range(len(self.vehicles)):
             for j in range(i + 1, len(self.vehicles)):
                 v1 = self.vehicles[i]
                 v2 = self.vehicles[j]
-                ttc = self.time_to_collision(v1, v2)
-                if ttc and ttc < 5:
-                    warnings.append(f"⚠️ Vehicles {v1.id} and {v2.id} may collide in {round(ttc, 2)}s")
+                dist = v1.distance_to(v2)
 
-        return messages, warnings
+                # Check communication distance (< 40m)
+                if dist < 40:
+                    comm_links.append((v1.id, v2.id))
 
-    def time_to_collision(self, v1, v2):
-        dx = v2.x - v1.x
-        dy = v2.y - v1.y
-        dvx = v2.speed * math.cos(math.radians(v2.angle)) - v1.speed * math.cos(math.radians(v1.angle))
-        dvy = v2.speed * math.sin(math.radians(v2.angle)) - v1.speed * math.sin(math.radians(v1.angle))
+                # Simple collision warning if distance < threshold
+                if dist < 15:
+                    warning_msg = f"Vehicles {v1.id} and {v2.id} are too close! Distance: {round(dist, 1)}m"
+                    warnings.append(warning_msg)
 
-        dv_dot_d = dvx * dx + dvy * dy
-        if dv_dot_d >= 0:
-            return None
-
-        dv2 = dvx**2 + dvy**2
-        if dv2 == 0:
-            return None
-
-        t = -(dv_dot_d) / dv2
-        if t < 0:
-            return None
-
-        closest_x = v1.x + v1.speed * math.cos(math.radians(v1.angle)) * t
-        closest_y = v1.y + v1.speed * math.sin(math.radians(v1.angle)) * t
-        closest_v2_x = v2.x + v2.speed * math.cos(math.radians(v2.angle)) * t
-        closest_v2_y = v2.y + v2.speed * math.sin(math.radians(v2.angle)) * t
-
-        distance = math.sqrt((closest_x - closest_v2_x) ** 2 + (closest_y - closest_v2_y) ** 2)
-        return t if distance < 10 else None
+        return messages, warnings, comm_links
