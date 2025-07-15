@@ -34,7 +34,7 @@ if not st.session_state.show_dashboard:
 
     # Visual Image
     try:
-        st.image(image_path, use_container_width=True)
+        st.image(assets/landing_visual.png, use_container_width=True)
     except:
         st.warning("Landing image not found. Please place your image at `/assets/landing_visual.png`.")
 
