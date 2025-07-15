@@ -54,9 +54,12 @@ if not st.session_state.show_dashboard:
         ### 🛠️ Explore the Live System
     """)
 
-    if st.button("🚀 Explore Dashboard"):
-        st.session_state.show_dashboard = True
-        st.experimental_rerun()
+    explore = st.button("🚀 Explore Dashboard")
+
+    if explore:
+     st.session_state.show_dashboard = True
+     st.stop()
+
 
     st.markdown("""
         ---
