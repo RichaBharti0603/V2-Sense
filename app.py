@@ -35,7 +35,7 @@ if not st.session_state.show_dashboard:
 
     # 🔍 Visual Preview Image
     try:
-        st.image("assets/landing_visual.png", use_container_width=True)
+        st.image("assets/landing_visual.png", use_container_width=600)
     except:
         st.warning("Landing image not found. Please place your image at `/assets/landing_visual.png`.")
 
@@ -77,8 +77,9 @@ if not st.session_state.show_dashboard:
     """)
 
     if st.button("🚀 Explore Dashboard"):
-        st.session_state.show_dashboard = True
-        st.experimental_rerun()
+     st.session_state.show_dashboard = True
+     st.rerun()
+
 
     st.markdown("""
         ---
